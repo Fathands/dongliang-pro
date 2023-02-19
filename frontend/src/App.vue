@@ -1,10 +1,17 @@
 <template>
   <a-layout has-sider>
     <a-layout-sider
-      :style="{ overflow: 'auto', height: '100vh', position: 'fixed', left: 0, top: 0, bottom: 0 }"
+      :style="{
+        overflow: 'auto',
+        height: '100vh',
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        bottom: 0,
+      }"
     >
       <div class="logo">
-        <img class="icon" src="/public/logo.png" alt="icon">
+        <img class="icon" src="/public/logo.png" alt="icon" />
         Momentum
       </div>
       <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline">
@@ -17,7 +24,45 @@
     <a-layout :style="{ marginLeft: '200px' }">
       <a-layout-header :style="{ background: '#fff', padding: 0 }" />
       <a-layout-content :style="{ margin: '24px 16px 0', overflow: 'initial' }">
-        sss
+        <a-table
+          :columns="columns"
+          :data-source="table_list"
+          :pagination="false"
+          :loading="loading"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'bianhua'">
+              <a-button
+                type="link"
+                v-if="+record.bianhua !== 0"
+                :danger="+record.bianhua <= 0"
+                >{{ record.bianhua }}</a-button
+              >
+            </template>
+          </template>
+          <template #expandedRowRender="{ record }">
+            <div class="expand">
+              <a-table
+                :columns="sub_columns"
+                :data-source="record.list"
+                :pagination="false"
+                :scroll="{ y: 500 }"
+                style="
+                  box-shadow: 0px 0px 12px rgb(0 0 0 / 12%);
+                  margin-left: 0;
+                "
+              >
+                <template #bodyCell="{ column, record }">
+                  <template v-if="column.key === 'zhangdie'">
+                    <a-button type="link" :danger="+record.zhangdie >= 0"
+                      >{{ record.zhangdie }}%</a-button
+                    >
+                  </template>
+                </template>
+              </a-table>
+            </div>
+          </template>
+        </a-table>
       </a-layout-content>
       <a-layout-footer :style="{ textAlign: 'center' }">
         Momentum ©2023 Created by Hzx
@@ -36,10 +81,8 @@ import {
   AppstoreOutlined,
   TeamOutlined,
   ShopOutlined,
-} from '@ant-design/icons-vue';
-import { defineComponent, ref, onMounted } from 'vue';
-import axios from 'axios';
-
+} from "@ant-design/icons-vue";
+import { defineComponent, ref, onMounted, getCurrentInstance } from "vue";
 
 export default defineComponent({
   components: {
@@ -53,41 +96,46 @@ export default defineComponent({
     ShopOutlined,
   },
   setup() {
+    const instance: any = getCurrentInstance();
+    const columns = [
+      { title: "板块名称", dataIndex: "name", key: "name" },
+      { title: "动量排名", dataIndex: "paiming", key: "paiming" },
+      { title: "排名变化", key: "bianhua" },
+      { title: "动量分值", dataIndex: "fenzhi", key: "fenzhi" },
+      { title: "数量", dataIndex: "count", key: "count" },
+    ];
+    const sub_columns = [
+      { title: "股票简称", dataIndex: "name", key: "name" },
+      { title: "最新涨跌幅", key: "zhangdie" },
+      { title: "所属同花顺行业", dataIndex: "hangye", key: "hangye" },
+      { title: "所属概念", dataIndex: "gainian", key: "gainian", width: 400 },
+    ];
+    const loading = ref(false);
+    const table_list = ref([]);
     const queryData = () => {
-        axios({
-          method: "post",
-          url:"http://www.iwencai.com/customized/chart/get-robot-data",//请求的链接地址
-          headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Content-Type": "application/json",
-          },
-          data: {
-            "question":"20日涨幅从高到底排序的前350只股票；非新股非st；基金持股大于2％的个股或北上资金持股大于0.5％；按行业分类；",
-            "perpage":"100",
-            "page":1,
-            "secondary_intent":"stock",
-            "log_info":"{\"input_type\":\"typewrite\"}",
-            "source":"Ths_iwencai_Xuangu",
-            "version":"2.0","query_area":"",
-            "block_list":"",
-            "add_info":"{\"urp\":{\"scene\":1,\"company\":1,\"business\":1},\"contentType\":\"json\",\"searchInfo\":true}",
-            "rsh":"438791553"},
+      loading.value = true;
+      instance.proxy.$http
+        .get("/gateway/api/get_wencai_data")
+        .then((res: any) => {
+          const list = res.data.data;
+          table_list.value = list;
+          loading.value = false;
         })
-          .then((resp) => {
-            //如果成功将在这里进行后续的逻辑操作
-          })
-          .catch((err) => {
-          //如果请求失败将在这里进行后续的逻辑操作
-         
-          }); 
+        .catch(() => {
+          loading.value = false;
+        });
     };
 
     onMounted(() => {
-      queryData()
-    })
+      queryData();
+    });
 
     return {
-      selectedKeys: ref<string[]>(['1']),
+      selectedKeys: ref<string[]>(["1"]),
+      table_list,
+      columns,
+      sub_columns,
+      loading,
     };
   },
 });
@@ -101,7 +149,7 @@ export default defineComponent({
   align-items: center;
   padding: 10px;
 }
-.logo .icon{
+.logo .icon {
   width: 46px;
   height: 46px;
   margin-right: 10px;
@@ -110,7 +158,7 @@ export default defineComponent({
   background: #fff;
 }
 
-[data-theme='dark'] .site-layout .site-layout-background {
+[data-theme="dark"] .site-layout .site-layout-background {
   background: #141414;
 }
 </style>
