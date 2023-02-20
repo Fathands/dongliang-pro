@@ -97,7 +97,7 @@ def get_wencai_data(request):
     )
     dongliang_fen_list = []
     for key, value in industry.data.items():
-        current_df = df[df["所属同花顺行业"].str.contains(key)][
+        current_df = df[df["所属同花顺行业"].str.contains("^{}-|-{}-|-{}$".format(key, key, key))][
             ["股票简称", "所属同花顺行业", "最新涨跌幅", "所属概念"]
         ]
         if current_df.empty == False:
