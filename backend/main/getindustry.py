@@ -7,6 +7,7 @@ from utils.wencai import getToken
 from django.http import JsonResponse
 from . import industry
 
+
 def get_industry(request):
     data = {}
     cache_data = industry.data
@@ -78,15 +79,10 @@ def get_industry(request):
         if name:
             cache_value = cache_data[name]
             data[name] = count if count > int(cache_value) else int(cache_value)
-    tuple_data = sorted(data.items(), key=lambda item:item[1])
-    sort_data = {}
-    for tuple_item in tuple_data:
-        sort_data[tuple_item[0]] = tuple_item[1]
-    result_text = json.dumps(sort_data, ensure_ascii=False)
+    result_text = json.dumps(data, ensure_ascii=False, sort_keys=True, indent=4)
     result_text = "data = " + result_text
-    
+
     with open("./main/industry.py", "w", encoding="utf-8") as f:
         f.write(result_text)
-    result_data = {"data": [], "msg": "success"}
+    result_data = {"data": {"count": len(data.keys())}, "msg": "success"}
     return JsonResponse(result_data, json_dumps_params={"ensure_ascii": False})
-

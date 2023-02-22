@@ -49,6 +49,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, getCurrentInstance } from "vue";
+import { message } from 'ant-design-vue';
 
 export default defineComponent({
   setup() {
@@ -89,6 +90,8 @@ export default defineComponent({
         .get("/gateway/api/get_industry")
         .then((res: any) => {
           btnloading.value = false;
+          const count = res.data && res.data.data &&res.data.data.count || 0
+          message.success(`${count}个行业数据更新成功`);
         })
         .catch(() => {
           btnloading.value = false;

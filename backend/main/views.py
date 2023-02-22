@@ -9,48 +9,48 @@ from django.http import JsonResponse
 from . import industry
 from utils.wencai import get
 
+
 def get_all_date(request):
     file_dir = "{}\years".format(os.getcwd())
     result_data = []
     for files in os.listdir(file_dir):
         file_path = "./years/{}".format(files)
         count = 0
-        if (os.path.exists(file_path)):
+        if os.path.exists(file_path):
             df = pd.read_csv(file_path)
             count = len(df)
-        file_name = files.split('.')[0]
+        file_name = files.split(".")[0]
         item = {}
-        item['date'] = file_name
-        item['count'] = count
+        item["date"] = file_name
+        item["count"] = count
         result_data.append(item)
     result_data = {"data": result_data, "msg": "success"}
     return JsonResponse(result_data, json_dumps_params={"ensure_ascii": False})
 
+
 def get_years_data(request):
-    date = request.GET.get('date')
+    date = request.GET.get("date")
     df = None
-    date = datetime.datetime.strptime(date,'%Y-%m-%d').date()
-    if (str(datetime.date.today()) != str(date)):
+    date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
+    if str(datetime.date.today()) != str(date):
         file_path = "./years/{}.csv".format(date)
-        if (os.path.exists(file_path)):
+        if os.path.exists(file_path):
             df = pd.read_csv(file_path)
     else:
-        df = get(
-            question="前复权创一年新高股票；所属概念；非新股非st；非北交所；所属行业", loop=True
-        )
+        df = get(question="前复权创一年新高股票；所属概念；非新股非st；非北交所；所属行业", loop=True)
         df = df[["股票简称", "所属同花顺行业", "最新涨跌幅", "所属概念"]]
         df = df.sort_values(by="最新涨跌幅", ascending=False)
         df = df.reset_index(drop=True)
-        
+
         df.set_index("股票简称")
         df.to_csv("./years/{}.csv".format(date))
     result_data = []
     if isinstance(df, pd.DataFrame):
         turn_dict = df.T.to_dict()
-        
+
         for k_index in turn_dict:
             stock_item = {}
-            stock_item["name"] = turn_dict[k_index]['股票简称']
+            stock_item["name"] = turn_dict[k_index]["股票简称"]
             stock_item["zhangdie"] = float(turn_dict[k_index]["最新涨跌幅"])
             gainian = turn_dict[k_index]["所属概念"]
             stock_item["gainian"] = (
@@ -74,7 +74,7 @@ def get_wencai_data(request):
     # 获取前一天df
     pre_file_path = "./tables/{}.csv".format(pre_date)
     pre_df = None
-    if (os.path.exists(pre_file_path)):
+    if os.path.exists(pre_file_path):
         pre_df = pd.read_csv(pre_file_path)
 
     response_data = {}
@@ -83,9 +83,9 @@ def get_wencai_data(request):
     )
     dongliang_fen_list = []
     for key, value in industry.data.items():
-        current_df = df[df["所属同花顺行业"].str.contains("^{}-|-{}-|-{}$".format(key, key, key))][
-            ["股票简称", "所属同花顺行业", "最新涨跌幅", "所属概念"]
-        ]
+        current_df = df[
+            df["所属同花顺行业"].str.contains("^{}-|-{}-|-{}$".format(key, key, key))
+        ][["股票简称", "所属同花顺行业", "最新涨跌幅", "所属概念"]]
         if current_df.empty == False:
             response_data[key] = {}
             response_data[key]["list"] = current_df.to_dict("list")
@@ -96,11 +96,11 @@ def get_wencai_data(request):
     industry_names = response_data.keys()
     industry_df_dict = {"板块名称": industry_names, "动量分值": dongliang_fen_list}
     industry_df = pd.DataFrame(industry_df_dict)
-    industry_df = industry_df.sort_values(by="动量分值", ascending=False)
+    industry_df = industry_df.sort_values(by=["动量分值", "板块名称"], ascending=False)
     industry_df = industry_df.reset_index(drop=True)
     industry_df["动量排名"] = [x + 1 for x in industry_df.index]
 
-    if (pre_df):
+    if pre_df:
         for x in industry_df["板块名称"]:
             pre_fenzhi = (
                 pre_df.loc[pre_df["板块名称"] == x, "动量排名"].iloc[0]
@@ -111,7 +111,7 @@ def get_wencai_data(request):
             diff = int(pre_fenzhi) - int(current_fenzhi) if pre_fenzhi != 0 else 0
             industry_df.loc[industry_df["板块名称"] == x, "排名变化"] = int(diff)
     else:
-        industry_df["排名变化"] = ''
+        industry_df["排名变化"] = ""
 
     industry_df.to_csv("./tables/{}.csv".format(current_date))
 
