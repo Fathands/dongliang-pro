@@ -15,54 +15,24 @@
         Momentum
       </div>
       <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline">
-        <a-menu-item key="1">
-          <user-outlined />
-          <span class="nav-text">工作台</span>
+        <a-menu-item key="workbench">
+          <router-link active-class="active" :to="{ name: 'workbench' }">
+            <user-outlined />
+            <span class="nav-text">工作台</span>
+          </router-link>
+        </a-menu-item>
+        <a-menu-item key="years">
+          <router-link active-class="active" :to="{ name: 'years' }">
+            <rise-outlined />
+            <span class="nav-text">一年新高</span>
+          </router-link>
         </a-menu-item>
       </a-menu>
     </a-layout-sider>
     <a-layout :style="{ marginLeft: '200px' }">
       <a-layout-header :style="{ background: '#fff', padding: 0 }" />
       <a-layout-content :style="{ margin: '24px 16px 0', overflow: 'initial' }">
-        <a-table
-          :columns="columns"
-          :data-source="table_list"
-          :pagination="false"
-          :loading="loading"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'bianhua'">
-              <a-button
-                type="link"
-                v-if="+record.bianhua !== 0"
-                :danger="+record.bianhua <= 0"
-                >{{ record.bianhua }}</a-button
-              >
-            </template>
-          </template>
-          <template #expandedRowRender="{ record }">
-            <div class="expand">
-              <a-table
-                :columns="sub_columns"
-                :data-source="record.list"
-                :pagination="false"
-                :scroll="{ y: 500 }"
-                style="
-                  box-shadow: 0px 0px 12px rgb(0 0 0 / 12%);
-                  margin-left: 0;
-                "
-              >
-                <template #bodyCell="{ column, record }">
-                  <template v-if="column.key === 'zhangdie'">
-                    <a-button type="link" :danger="+record.zhangdie >= 0"
-                      >{{ record.zhangdie }}%</a-button
-                    >
-                  </template>
-                </template>
-              </a-table>
-            </div>
-          </template>
-        </a-table>
+        <RouterView></RouterView>
       </a-layout-content>
       <a-layout-footer :style="{ textAlign: 'center' }">
         Momentum ©2023 Created by Hzx
@@ -74,68 +44,30 @@
 <script lang="ts">
 import {
   UserOutlined,
-  VideoCameraOutlined,
-  UploadOutlined,
-  BarChartOutlined,
-  CloudOutlined,
-  AppstoreOutlined,
-  TeamOutlined,
-  ShopOutlined,
+  RiseOutlined,
 } from "@ant-design/icons-vue";
-import { defineComponent, ref, onMounted, getCurrentInstance } from "vue";
+import { defineComponent, ref, computed } from "vue";
+
+import { useRoute } from 'vue-router';
 
 export default defineComponent({
   components: {
     UserOutlined,
-    VideoCameraOutlined,
-    UploadOutlined,
-    BarChartOutlined,
-    CloudOutlined,
-    AppstoreOutlined,
-    TeamOutlined,
-    ShopOutlined,
+    RiseOutlined,
   },
   setup() {
-    const instance: any = getCurrentInstance();
-    const columns = [
-      { title: "板块名称", dataIndex: "name", key: "name" },
-      { title: "动量排名", dataIndex: "paiming", key: "paiming" },
-      { title: "排名变化", key: "bianhua" },
-      { title: "动量分值", dataIndex: "fenzhi", key: "fenzhi" },
-      { title: "数量", dataIndex: "count", key: "count" },
-    ];
-    const sub_columns = [
-      { title: "股票简称", dataIndex: "name", key: "name" },
-      { title: "最新涨跌幅", key: "zhangdie" },
-      { title: "所属同花顺行业", dataIndex: "hangye", key: "hangye" },
-      { title: "所属概念", dataIndex: "gainian", key: "gainian", width: 400 },
-    ];
-    const loading = ref(false);
-    const table_list = ref([]);
-    const queryData = () => {
-      loading.value = true;
-      instance.proxy.$http
-        .get("/gateway/api/get_wencai_data")
-        .then((res: any) => {
-          const list = res.data.data;
-          table_list.value = list;
-          loading.value = false;
-        })
-        .catch(() => {
-          loading.value = false;
-        });
-    };
-
-    onMounted(() => {
-      queryData();
+    const route = useRoute();
+    
+    const selectedKeys = computed({
+      get() {
+        const [, key] = route.path.split('/');
+        return key ? [key] : [];
+      },
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      set() {},
     });
-
     return {
-      selectedKeys: ref<string[]>(["1"]),
-      table_list,
-      columns,
-      sub_columns,
-      loading,
+      selectedKeys,
     };
   },
 });

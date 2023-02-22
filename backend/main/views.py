@@ -1,86 +1,69 @@
-from django.http import JsonResponse, HttpResponse
-
 import os
 import execjs
 import json
 import requests as rq
 import pandas as pd
-from . import industry
 import datetime
 
-# 获取token
+from django.http import JsonResponse
+from . import industry
+from utils.wencai import get
 
+def get_all_date(request):
+    file_dir = "{}\years".format(os.getcwd())
+    result_data = []
+    for files in os.listdir(file_dir):
+        file_path = "./years/{}".format(files)
+        count = 0
+        if (os.path.exists(file_path)):
+            df = pd.read_csv(file_path)
+            count = len(df)
+        file_name = files.split('.')[0]
+        item = {}
+        item['date'] = file_name
+        item['count'] = count
+        result_data.append(item)
+    result_data = {"data": result_data, "msg": "success"}
+    return JsonResponse(result_data, json_dumps_params={"ensure_ascii": False})
 
-def getToken():
-    with open(os.path.join(os.path.dirname(__file__), "../hexin-v.js"), "r") as f:
-        jscontent = f.read()
-    context = execjs.compile(jscontent)
-    return context.call("v")
-
-
-# 获取每页数据
-
-
-def getPage(**kwargs):
-    data = {"perpage": 100, "page": 1, "source": "Ths_iwencai_Xuangu", **kwargs}
-    res = rq.request(
-        method="POST",
-        url="http://www.iwencai.com/customized/chart/get-robot-data",
-        json=data,
-        headers={
-            "hexin-v": getToken(),
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
-        },
-    )
-    result = json.loads(res.text)
-    list = result["data"]["answer"][0]["txt"][0]["content"]["components"][0]["data"][
-        "datas"
-    ]
-    return pd.DataFrame.from_dict(list)
-
-
-# 是否继续循环
-
-
-def canLoop(loop, count):
-    if loop is True:
-        return True
+def get_years_data(request):
+    date = request.GET.get('date')
+    df = None
+    date = datetime.datetime.strptime(date,'%Y-%m-%d').date()
+    if (str(datetime.date.today()) != str(date)):
+        file_path = "./years/{}.csv".format(date)
+        if (os.path.exists(file_path)):
+            df = pd.read_csv(file_path)
     else:
-        return count < loop
+        df = get(
+            question="前复权创一年新高股票；所属概念；非新股非st；非北交所；所属行业", loop=True
+        )
+        df = df[["股票简称", "所属同花顺行业", "最新涨跌幅", "所属概念"]]
+        df = df.sort_values(by="最新涨跌幅", ascending=False)
+        df = df.reset_index(drop=True)
+        
+        df.set_index("股票简称")
+        df.to_csv("./years/{}.csv".format(date))
+    result_data = []
+    if isinstance(df, pd.DataFrame):
+        turn_dict = df.T.to_dict()
+        
+        for k_index in turn_dict:
+            stock_item = {}
+            stock_item["name"] = turn_dict[k_index]['股票简称']
+            stock_item["zhangdie"] = float(turn_dict[k_index]["最新涨跌幅"])
+            gainian = turn_dict[k_index]["所属概念"]
+            stock_item["gainian"] = (
+                turn_dict[k_index]["所属概念"] if isinstance(gainian, str) else ""
+            )
+            hangye = turn_dict[k_index]["所属同花顺行业"]
+            stock_item["hangye"] = (
+                turn_dict[k_index]["所属同花顺行业"] if isinstance(hangye, str) else ""
+            )
+            result_data.append(stock_item)
 
-
-# 循环分页
-
-
-def loopPage(loop, **kwargs):
-    count = 0
-    resultPageLen = 1
-    result = None
-    if "page" not in kwargs:
-        kwargs["page"] = 1
-    initPage = kwargs["page"]
-
-    while resultPageLen > 0 and canLoop(loop, count):
-        kwargs["page"] = initPage + count
-        resultPage = getPage(**kwargs)
-        resultPageLen = len(resultPage)
-        count = count + 1
-        if result is None:
-            result = resultPage
-        else:
-            result = pd.concat([result, resultPage], ignore_index=True)
-
-    return result
-
-
-# 获取结果
-
-
-def get(loop=False, **kwargs):
-    if loop:
-        return loopPage(loop, **kwargs)
-    else:
-        return getPage(**kwargs)
+    result_data = {"data": result_data, "msg": "success"}
+    return JsonResponse(result_data, json_dumps_params={"ensure_ascii": False})
 
 
 def get_wencai_data(request):
@@ -89,7 +72,10 @@ def get_wencai_data(request):
     current_date = now_time.strftime("%Y-%m-%d")
 
     # 获取前一天df
-    pre_df = pd.read_csv("./tables/{}.csv".format(pre_date))
+    pre_file_path = "./tables/{}.csv".format(pre_date)
+    pre_df = None
+    if (os.path.exists(pre_file_path)):
+        pre_df = pd.read_csv(pre_file_path)
 
     response_data = {}
     df = get(
@@ -114,15 +100,18 @@ def get_wencai_data(request):
     industry_df = industry_df.reset_index(drop=True)
     industry_df["动量排名"] = [x + 1 for x in industry_df.index]
 
-    for x in industry_df["板块名称"]:
-        pre_fenzhi = (
-            pre_df.loc[pre_df["板块名称"] == x, "动量排名"].iloc[0]
-            if (pre_df["板块名称"].eq(str(x))).any()
-            else 0
-        )
-        current_fenzhi = industry_df.loc[industry_df["板块名称"] == x, "动量排名"].iloc[0]
-        diff = int(pre_fenzhi) - int(current_fenzhi) if pre_fenzhi != 0 else 0
-        industry_df.loc[industry_df["板块名称"] == x, "排名变化"] = int(diff)
+    if (pre_df):
+        for x in industry_df["板块名称"]:
+            pre_fenzhi = (
+                pre_df.loc[pre_df["板块名称"] == x, "动量排名"].iloc[0]
+                if (pre_df["板块名称"].eq(str(x))).any()
+                else 0
+            )
+            current_fenzhi = industry_df.loc[industry_df["板块名称"] == x, "动量排名"].iloc[0]
+            diff = int(pre_fenzhi) - int(current_fenzhi) if pre_fenzhi != 0 else 0
+            industry_df.loc[industry_df["板块名称"] == x, "排名变化"] = int(diff)
+    else:
+        industry_df["排名变化"] = ''
 
     industry_df.to_csv("./tables/{}.csv".format(current_date))
 
