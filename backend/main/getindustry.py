@@ -3,17 +3,13 @@ import requests as rq
 import execjs
 from lxml import etree
 import json
+from utils.wencai import getToken
+from django.http import JsonResponse
+from . import industry
 
-
-def getToken():
-    with open(os.path.join(os.path.dirname(__file__), "hexin-v.js"), "r") as f:
-        jscontent = f.read()
-    context = execjs.compile(jscontent)
-    return context.call("v")
-
-
-def getIndustry():
+def get_industry(request):
     data = {}
+    cache_data = industry.data
     # 请求第一页数据
     res = rq.request(
         method="POST",
@@ -46,7 +42,8 @@ def getIndustry():
         down_count = down_list[0]
         count = int(up_count) + int(down_count)
         if name:
-            data[name] = count
+            cache_value = cache_data[name]
+            data[name] = count if count > int(cache_value) else int(cache_value)
     # 请求第二页数据
     res = rq.request(
         method="POST",
@@ -79,12 +76,17 @@ def getIndustry():
         down_count = down_list[0]
         count = int(up_count) + int(down_count)
         if name:
-            data[name] = count
-    result_text = json.dumps(data, ensure_ascii=False)
+            cache_value = cache_data[name]
+            data[name] = count if count > int(cache_value) else int(cache_value)
+    tuple_data = sorted(data.items(), key=lambda item:item[1])
+    sort_data = {}
+    for tuple_item in tuple_data:
+        sort_data[tuple_item[0]] = tuple_item[1]
+    result_text = json.dumps(sort_data, ensure_ascii=False)
     result_text = "data = " + result_text
-    print(result_text)
+    
     with open("./main/industry.py", "w", encoding="utf-8") as f:
         f.write(result_text)
+    result_data = {"data": [], "msg": "success"}
+    return JsonResponse(result_data, json_dumps_params={"ensure_ascii": False})
 
-
-getIndustry()

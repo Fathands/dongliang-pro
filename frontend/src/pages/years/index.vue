@@ -1,7 +1,9 @@
 <template>
   <div class="years">
     <div class="btns" style="margin-bottom: 20px;">
-      <a-button type="primary" @click="getToday">今天数据</a-button>
+      <a-space>
+        <a-button type="primary" @click="getToday">今天数据</a-button>
+      </a-space>
     </div>
 
     <a-table
