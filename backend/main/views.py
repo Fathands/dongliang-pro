@@ -100,7 +100,7 @@ def get_wencai_data(request):
     industry_df = industry_df.reset_index(drop=True)
     industry_df["动量排名"] = [x + 1 for x in industry_df.index]
 
-    if pre_df:
+    if pre_df.empty == False:
         for x in industry_df["板块名称"]:
             pre_fenzhi = (
                 pre_df.loc[pre_df["板块名称"] == x, "动量排名"].iloc[0]
