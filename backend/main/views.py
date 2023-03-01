@@ -39,6 +39,7 @@ def get_years_data(request):
     else:
         df = get(question="前复权创一年新高股票；所属概念；非新股非st；非北交所；所属行业", loop=True)
         df = df[["股票简称", "所属同花顺行业", "最新涨跌幅", "所属概念"]]
+        df["最新涨跌幅"] = pd.to_numeric(df["最新涨跌幅"])
         df = df.sort_values(by="最新涨跌幅", ascending=False)
         df = df.reset_index(drop=True)
 
