@@ -9,7 +9,7 @@
     <a-table
       :columns="columns"
       :data-source="table_list"
-      :pagination="false"
+      :pagination="true"
       :loading="loading"
     >
       <template #bodyCell="{ column, record }">

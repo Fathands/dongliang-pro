@@ -24,6 +24,7 @@ def get_all_date(request):
         item["date"] = file_name
         item["count"] = count
         result_data.append(item)
+    result_data = sorted(result_data, key=lambda item: item["date"], reverse=True)
     result_data = {"data": result_data, "msg": "success"}
     return JsonResponse(result_data, json_dumps_params={"ensure_ascii": False})
 
