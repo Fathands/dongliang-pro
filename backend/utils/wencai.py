@@ -18,20 +18,25 @@ def getToken():
 
 
 def getPage(**kwargs):
-    data = {"perpage": 100, "page": 1, "source": "Ths_iwencai_Xuangu", **kwargs}
+    data = {
+        "perpage": 100,
+        "page": 1,
+        "source": "Ths_iwencai_Xuangu",
+        "comp_id": "6623802",
+        "uuid": "24087",
+        **kwargs,
+    }
     res = rq.request(
         method="POST",
-        url="http://www.iwencai.com/customized/chart/get-robot-data",
-        json=data,
+        url="http://www.iwencai.com/gateway/urp/v7/landing/getDataList",
+        data=data,
         headers={
-            "hexin-v": getToken(),
+            "Content-Type": "application/x-www-form-urlencoded",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
         },
     )
     result = json.loads(res.text)
-    list = result["data"]["answer"][0]["txt"][0]["content"]["components"][0]["data"][
-        "datas"
-    ]
+    list = result["answer"]["components"][0]["data"]["datas"]
     return pd.DataFrame.from_dict(list)
 
 

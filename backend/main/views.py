@@ -38,7 +38,7 @@ def get_years_data(request):
         if os.path.exists(file_path):
             df = pd.read_csv(file_path)
     else:
-        df = get(question="前复权创一年新高股票；所属概念；非新股非st；非北交所；所属行业", loop=True)
+        df = get(query="前复权创一年新高股票；所属概念；非st；非北交所；所属行业", loop=True)
         df = df[["股票简称", "所属同花顺行业", "最新涨跌幅", "所属概念"]]
         df["最新涨跌幅"] = pd.to_numeric(df["最新涨跌幅"])
         df = df.sort_values(by="最新涨跌幅", ascending=False)
@@ -81,7 +81,8 @@ def get_wencai_data(request):
 
     response_data = {}
     df = get(
-        question="20日涨幅从高到底排序的前350只股票；非新股非st；基金持股大于2％的个股或北上资金持股大于0.5％；按行业分类", loop=True
+        query="20日涨幅从高到底排序的前350只股票；非st；基金持股大于2％的个股或北上资金持股大于0.5％；按行业分类；所属概念",
+        loop=True,
     )
     dongliang_fen_list = []
     for key, value in industry.data.items():
